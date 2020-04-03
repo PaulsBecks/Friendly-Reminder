@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Friendly Reminder",
+    "version": "0.0.2",
+    "slug": "friendly-reminder",
+    "platforms": ["ios", "android"],
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.doennebeck.friendlyreminder",
+      "versionCode": 1
+    },
+    "description": "A friendly reminder to contact a friend a day"
+  }
+}
