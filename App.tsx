@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { Linking, Notifications } from "expo";
+import { StyleSheet, Text, View, Image } from "react-native";
+import { AppLoading, Linking, Notifications } from "expo";
 import * as Contacts from "expo-contacts";
 import * as SecureStore from "expo-secure-store";
-import { Card } from "react-native-material-ui";
-import { Button, ButtonGroup } from "react-native-elements";
+import { Button } from "react-native-elements";
 import { MaterialIcons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import { useFonts } from "@use-expo/font";
 
 const _MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -20,24 +21,22 @@ function dateDiffInDays(a: Date, b: Date) {
 
 export default function App() {
   const [currentContact, setCurrentContact] = useState();
+  let [fontsLoaded] = useFonts({
+    "Mako-Regular": require("./assets/font/Mako-Regular.ttf")
+  });
 
-  function notificationListener(x: any) {
-    console.log(x);
-  }
   useEffect(() => {
     (async () => {
-      Notifications.addListener(notificationListener);
       const currentContactJson = await SecureStore.getItemAsync(
         "currentContact"
       );
-
+      console.log(currentContact);
       if (currentContactJson) {
         const _currentContact = JSON.parse(currentContactJson);
         const dateDiff = dateDiffInDays(
           new Date(),
           new Date(_currentContact.timestamp)
         );
-        console.log(currentContactJson, dateDiff);
         if (dateDiff === 0) {
           setCurrentContact(_currentContact.contact);
           return;
@@ -73,14 +72,14 @@ export default function App() {
     const { status } = await Contacts.requestPermissionsAsync();
     if (status === "granted") {
       let { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.PHONE_NUMBERS, Contacts.Fields.Emails]
+        fields: [Contacts.PHONE_NUMBERS, Contacts.Fields.Emails, Contacts.IMAGE]
       });
       const blacklisted = await SecureStore.getItemAsync("blacklisted");
       if (blacklisted) {
-        console.log(blacklisted);
         data = data.filter(contact => !blacklisted.includes(contact.id));
       }
       const r = Math.floor(Math.random() * data.length);
+      console.log(data[r]);
       SecureStore.setItemAsync(
         "currentContact",
         JSON.stringify({ contact: data[r], timestamp: new Date() })
@@ -89,10 +88,26 @@ export default function App() {
     }
   }
 
+  if (!fontsLoaded) {
+    return <AppLoading />;
+  }
+
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Friendly Reminder</Text>
+      </View>
       {currentContact && (
         <View style={styles.card}>
+          {currentContact.imageAvailable ? (
+            <Image source={currentContact.image} style={styles.contactImage} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Text style={styles.placeholderImageText}>
+                {currentContact.name[0]}
+              </Text>
+            </View>
+          )}
           <Text style={styles.name}>{currentContact.name}</Text>
           <View>
             <View style={styles.buttonContainer}>
@@ -166,6 +181,17 @@ export default function App() {
       )}
       <View style={styles.removeButtonContainer}>
         <Button
+          buttonStyle={styles.skipButton}
+          icon={
+            <MaterialIcons
+              style={styles.buttonIcon}
+              name="skip-next"
+              color="white"
+            />
+          }
+          onPress={() => getNewContact()}
+        ></Button>
+        <Button
           buttonStyle={styles.removeButton}
           icon={
             <MaterialIcons
@@ -175,7 +201,6 @@ export default function App() {
               color="white"
             />
           }
-          title="Remove"
           onPress={async () => {
             await addCurrentToBlacklist();
             getNewContact();
@@ -209,17 +234,63 @@ const styles = StyleSheet.create({
     fontSize: 25
   },
   button: {
-    margin: 5
+    margin: 5,
+    backgroundColor: "#228888"
   },
   name: {
     fontSize: 25,
-    textAlign: "center"
+    textAlign: "center",
+    fontFamily: "Mako-Regular",
+    marginBottom: 25,
+    fontWeight: "700",
+    color: "#092121"
+  },
+  skipButton: {
+    backgroundColor: "#d6a95a",
+    margin: 5
   },
   removeButton: {
-    backgroundColor: "#ff0000",
-    marginBottom: 50
+    backgroundColor: "#c55164",
+    margin: 5
   },
   removeButtonContainer: {
-    flex: 1
+    flex: 1,
+    flexDirection: "row",
+    marginBottom: 50
+  },
+  header: {
+    paddingTop: Constants.statusBarHeight,
+    backgroundColor: "#228888",
+    alignSelf: "stretch"
+  },
+  headerTitle: {
+    color: "#fff",
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 20,
+    fontFamily: "Mako-Regular",
+    fontWeight: "700"
+  },
+  placeholderImage: {
+    width: 80,
+    height: 80,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 25,
+    borderColor: "#134a4a",
+    borderWidth: 5,
+    borderRadius: 5
+  },
+  placeholderImageText: {
+    color: "#134a4a",
+    fontSize: 25,
+    fontWeight: "bold"
+  },
+  contactImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 5,
+    marginBottom: 25
   }
 });

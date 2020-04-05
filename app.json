@@ -5,10 +5,10 @@
     "slug": "friendly-reminder",
     "platforms": ["ios", "android"],
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/img/icon/mipmap-hdpi/ic_launcher.png",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
+      "mdpi": "./assets/img/splash/drawable/screen.png",
+      "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
     "updates": {
@@ -20,7 +20,15 @@
     },
     "android": {
       "package": "com.doennebeck.friendlyreminder",
-      "versionCode": 1
+      "versionCode": 1,
+      "splash": {
+        "mdpi": "./assets/img/splash/drawable-mdpi/screen.png",
+        "hdpi": "./assets/img/splash/drawable-hdpi/screen.png",
+        "xhdpi": "./assets/img/splash/drawable-xhdpi/screen.png",
+        "xxhdpi": "./assets/img/splash/drawable-xxhdpi/screen.png",
+        "xxxhdpi": "./assets/img/splash/drawable-xxxhdpi/screen.png",
+        "resizeMode": "cover"
+      }
     },
     "description": "A friendly reminder to contact a friend a day"
   }

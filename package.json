@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@types/react-native-material-ui": "^1.32.0",
+    "@use-expo/font": "^1.0.1",
     "expo": "~37.0.3",
     "expo-contacts": "~8.1.0",
     "expo-secure-store": "~8.1.0",
