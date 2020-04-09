@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View, Image } from "react-native";
+import { StyleSheet, Text, View, Animated } from "react-native";
 import { AppLoading, Linking, Notifications } from "expo";
 import * as Contacts from "expo-contacts";
 import * as SecureStore from "expo-secure-store";
@@ -21,8 +21,27 @@ function dateDiffInDays(a: Date, b: Date) {
 
 export default function App() {
   const [currentContact, setCurrentContact] = useState();
+  const [bottomAreaSelected, setBottomAreaSelected] = useState(false);
+  const [getInTouchY] = useState(new Animated.Value(0));
+  const [bottomAreaY] = useState(new Animated.Value(0));
+  const [showActionButtons, setShowActionButtons] = useState(false);
+
+  const animateGetInTouch = () => {
+    Animated.timing(getInTouchY, { toValue: 1, duration: 200 }).start(() => {
+      setShowActionButtons(true);
+      Animated.timing(getInTouchY, { toValue: 0, duration: 100 }).start();
+    });
+  };
+
+  const animateBottomArea = () => {
+    Animated.timing(bottomAreaY, { toValue: 1, duration: 200 }).start(() => {
+      setBottomAreaSelected(true);
+      Animated.timing(bottomAreaY, { toValue: 0, duration: 100 }).start();
+    });
+  };
+
   let [fontsLoaded] = useFonts({
-    "Mako-Regular": require("./assets/font/Mako-Regular.ttf")
+    Roshida: require("./assets/font/Roshida-Valentines.ttf"),
   });
 
   useEffect(() => {
@@ -30,7 +49,6 @@ export default function App() {
       const currentContactJson = await SecureStore.getItemAsync(
         "currentContact"
       );
-      console.log(currentContact);
       if (currentContactJson) {
         const _currentContact = JSON.parse(currentContactJson);
         const dateDiff = dateDiffInDays(
@@ -49,9 +67,9 @@ export default function App() {
       Notifications.scheduleLocalNotificationAsync(
         {
           title: "Just a friendly reminder to write a friend!",
-          body: "Click to see who you will write today."
+          body: "Click to see who you will write today.",
         },
-        { time: tomorrow }
+        { time: tomorrow, repeat: "day" }
       );
     })();
   }, []);
@@ -69,17 +87,22 @@ export default function App() {
   }
 
   async function getNewContact() {
+    setShowActionButtons(false);
+    setBottomAreaSelected(false);
     const { status } = await Contacts.requestPermissionsAsync();
     if (status === "granted") {
       let { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.PHONE_NUMBERS, Contacts.Fields.Emails, Contacts.IMAGE]
+        fields: [
+          Contacts.PHONE_NUMBERS,
+          Contacts.Fields.Emails,
+          Contacts.IMAGE,
+        ],
       });
       const blacklisted = await SecureStore.getItemAsync("blacklisted");
       if (blacklisted) {
-        data = data.filter(contact => !blacklisted.includes(contact.id));
+        data = data.filter((contact) => !blacklisted.includes(contact.id));
       }
       const r = Math.floor(Math.random() * data.length);
-      console.log(data[r]);
       SecureStore.setItemAsync(
         "currentContact",
         JSON.stringify({ contact: data[r], timestamp: new Date() })
@@ -99,114 +122,162 @@ export default function App() {
       </View>
       {currentContact && (
         <View style={styles.card}>
-          {currentContact.imageAvailable ? (
-            <Image source={currentContact.image} style={styles.contactImage} />
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Text style={styles.placeholderImageText}>
-                {currentContact.name[0]}
-              </Text>
-            </View>
-          )}
           <Text style={styles.name}>{currentContact.name}</Text>
-          <View>
-            <View style={styles.buttonContainer}>
-              {currentContact.phoneNumbers && (
+          <View
+            style={{
+              borderColor: "#228888",
+              borderWidth: 5,
+              borderRadius: 40,
+              padding: 10,
+              backgroundColor: "#e7fafa",
+              overflow: "hidden",
+              width: 400,
+              height: 90,
+            }}
+          >
+            <Animated.View
+              style={{
+                transform: [
+                  {
+                    translateY: getInTouchY.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 100],
+                    }),
+                  },
+                ],
+              }}
+            >
+              {showActionButtons ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: 6,
+                    marginHorizontal: 10,
+                  }}
+                >
+                  {currentContact.phoneNumbers && (
+                    <Button
+                      buttonStyle={styles.button}
+                      icon={
+                        <MaterialIcons
+                          style={styles.buttonIcon}
+                          name="phone"
+                          color="white"
+                        />
+                      }
+                      onPress={() =>
+                        Linking.openURL(
+                          `tel:${currentContact.phoneNumbers[0].number}`
+                        )
+                      }
+                    ></Button>
+                  )}
+                  {currentContact.phoneNumbers && (
+                    <Button
+                      buttonStyle={styles.button}
+                      icon={
+                        <MaterialIcons
+                          style={styles.buttonIcon}
+                          name="sms"
+                          color="white"
+                        />
+                      }
+                      onPress={() =>
+                        Linking.openURL(
+                          `sms:${currentContact.phoneNumbers[0].number}`
+                        )
+                      }
+                    ></Button>
+                  )}
+                  {currentContact.email && (
+                    <Button
+                      buttonStyle={styles.button}
+                      icon={
+                        <MaterialIcons
+                          style={styles.buttonIcon}
+                          name="email"
+                          color="white"
+                        />
+                      }
+                      onPress={() =>
+                        Linking.openURL(`mailto:${currentContact.email}`)
+                      }
+                    ></Button>
+                  )}
+                  <Button
+                    buttonStyle={styles.button}
+                    icon={
+                      <MaterialIcons
+                        style={styles.buttonIcon}
+                        name="account-box"
+                        color="white"
+                      />
+                    }
+                    onPress={() =>
+                      Linking.openURL(
+                        `content://com.android.contacts/contacts/${currentContact.id}`
+                      )
+                    }
+                  ></Button>
+                </View>
+              ) : (
                 <Button
-                  buttonStyle={styles.button}
-                  icon={
-                    <MaterialIcons
-                      style={styles.buttonIcon}
-                      name="phone"
-                      color="white"
-                    />
-                  }
-                  onPress={() =>
-                    Linking.openURL(
-                      `tel:${currentContact.phoneNumbers[0].number}`
-                    )
-                  }
+                  buttonStyle={{
+                    backgroundColor: "#e7fafa",
+                  }}
+                  titleStyle={styles.contactButtonText}
+                  title={`Bei ${currentContact.name.split(" ")[0]} melden.`}
+                  onPress={animateGetInTouch}
                 ></Button>
               )}
-              {currentContact.phoneNumbers && (
-                <Button
-                  buttonStyle={styles.button}
-                  icon={
-                    <MaterialIcons
-                      style={styles.buttonIcon}
-                      name="sms"
-                      color="white"
-                    />
-                  }
-                  onPress={() =>
-                    Linking.openURL(
-                      `sms:${currentContact.phoneNumbers[0].number}`
-                    )
-                  }
-                ></Button>
-              )}
-              {currentContact.email && (
-                <Button
-                  buttonStyle={styles.button}
-                  icon={
-                    <MaterialIcons
-                      style={styles.buttonIcon}
-                      name="email"
-                      color="white"
-                    />
-                  }
-                  onPress={() =>
-                    Linking.openURL(`mailto:${currentContact.email}`)
-                  }
-                ></Button>
-              )}
-              <Button
-                buttonStyle={styles.button}
-                icon={
-                  <MaterialIcons
-                    style={styles.buttonIcon}
-                    name="account-box"
-                    color="white"
-                  />
-                }
-                onPress={() =>
-                  Linking.openURL(
-                    `content://com.android.contacts/contacts/${currentContact.id}`
-                  )
-                }
-              ></Button>
-            </View>
+            </Animated.View>
           </View>
         </View>
       )}
-      <View style={styles.removeButtonContainer}>
-        <Button
-          buttonStyle={styles.skipButton}
-          icon={
-            <MaterialIcons
-              style={styles.buttonIcon}
-              name="skip-next"
-              color="white"
-            />
-          }
-          onPress={() => getNewContact()}
-        ></Button>
-        <Button
-          buttonStyle={styles.removeButton}
-          icon={
-            <MaterialIcons
-              style={styles.buttonIcon}
-              name="remove-circle"
-              account-box
-              color="white"
-            />
-          }
-          onPress={async () => {
-            await addCurrentToBlacklist();
-            getNewContact();
-          }}
-        ></Button>
-      </View>
+      <Animated.View
+        style={{
+          flex: 1,
+          flexDirection: "row",
+          marginBottom: 50,
+          justifyContent: "center",
+          alignItems: "center",
+          transform: [
+            {
+              translateY: bottomAreaY.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 300],
+              }),
+            },
+          ],
+        }}
+      >
+        {bottomAreaSelected ? (
+          <View style={styles.removeButtonContainer}>
+            <Button
+              buttonStyle={styles.bottomButton}
+              titleStyle={styles.skipText}
+              title="Heute überspringen"
+              onPress={() => getNewContact()}
+            ></Button>
+            <Button
+              buttonStyle={styles.bottomButton}
+              titleStyle={styles.removeText}
+              title="Nicht mehr vorschlagen"
+              onPress={async () => {
+                await addCurrentToBlacklist();
+                getNewContact();
+              }}
+            ></Button>
+          </View>
+        ) : (
+          <Text style={styles.dontGetInTouchText} onPress={animateBottomArea}>
+            Nicht bei {currentContact && currentContact.name.split(" ")[0]}{" "}
+            melden
+          </Text>
+        )}
+      </Animated.View>
     </View>
   );
 }
@@ -214,54 +285,54 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#e7fafa",
     alignItems: "center",
-    justifyContent: "center"
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   card: {
     flex: 6,
     justifyContent: "center",
     alignItems: "center",
     width: 300,
-    height: 70
+    height: 70,
   },
   buttonIcon: {
-    fontSize: 25
+    fontSize: 25,
   },
   button: {
     margin: 5,
-    backgroundColor: "#228888"
+    backgroundColor: "#228888",
   },
   name: {
-    fontSize: 25,
+    fontSize: 60,
     textAlign: "center",
-    fontFamily: "Mako-Regular",
-    marginBottom: 25,
-    fontWeight: "700",
-    color: "#092121"
+    fontFamily: "Roshida",
+    marginBottom: 50,
+    color: "#092121",
+    padding: 5,
   },
-  skipButton: {
-    backgroundColor: "#d6a95a",
-    margin: 5
+  bottomButton: {
+    backgroundColor: "transparent",
+    margin: 5,
   },
-  removeButton: {
-    backgroundColor: "#c55164",
-    margin: 5
+  skipText: {
+    fontSize: 20,
+    fontFamily: "Roshida",
+    color: "#d6a95a",
+  },
+  removeText: {
+    fontSize: 20,
+    fontFamily: "Roshida",
+    color: "#c55164",
   },
   removeButtonContainer: {
     flex: 1,
-    flexDirection: "row",
-    marginBottom: 50
+    marginBottom: 50,
   },
   header: {
     paddingTop: Constants.statusBarHeight,
     backgroundColor: "#228888",
-    alignSelf: "stretch"
+    alignSelf: "stretch",
   },
   headerTitle: {
     color: "#fff",
@@ -269,28 +340,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     fontSize: 20,
-    fontFamily: "Mako-Regular",
-    fontWeight: "700"
+    fontFamily: "Roshida",
   },
-  placeholderImage: {
-    width: 80,
-    height: 80,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 25,
-    borderColor: "#134a4a",
-    borderWidth: 5,
-    borderRadius: 5
+  contactButtonText: {
+    fontSize: 40,
+    color: "#228888",
+    fontFamily: "Roshida",
   },
-  placeholderImageText: {
-    color: "#134a4a",
-    fontSize: 25,
-    fontWeight: "bold"
+  dontGetInTouchText: {
+    fontFamily: "Roshida",
+    fontSize: 20,
   },
-  contactImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 5,
-    marginBottom: 25
-  }
 });

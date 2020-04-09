@@ -5,7 +5,7 @@
     "slug": "friendly-reminder",
     "platforms": ["ios", "android"],
     "orientation": "portrait",
-    "icon": "./assets/img/icon/mipmap-hdpi/ic_launcher.png",
+    "icon": "./assets/img/logo.jpeg",
     "splash": {
       "mdpi": "./assets/img/splash/drawable/screen.png",
       "resizeMode": "cover",
